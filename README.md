@@ -1,4 +1,6 @@
-<img width="99%" alt="EqDemoImage" src="https://github.com/user-attachments/assets/a2f1fdec-f1db-478d-8d7e-67aea8a4d9e9" />
+<img width="100%" alt="Eq GUI in DAW" src="https://github.com/user-attachments/assets/8b38347f-b88b-4a4b-a8af-f08048e21195" />
+
+(Image shows .vst3 open in FL Studio)
 
 Instructions:
 - The standalone .exe can be launched and used as-is
