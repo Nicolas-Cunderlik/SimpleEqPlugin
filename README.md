@@ -1,4 +1,4 @@
-<img width="810" height="431" alt="EqDemoImage" src="https://github.com/user-attachments/assets/a2f1fdec-f1db-478d-8d7e-67aea8a4d9e9" />
+<img width="99%" alt="EqDemoImage" src="https://github.com/user-attachments/assets/a2f1fdec-f1db-478d-8d7e-67aea8a4d9e9" />
 
 Instructions:
 - The standalone .exe can be launched and used as-is
