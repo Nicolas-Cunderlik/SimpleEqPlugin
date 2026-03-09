@@ -3,7 +3,7 @@
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p)
     : audioProcessor(p)
 {
-    startTimerHz(24); // Refresh rate
+    startTimerHz(30); // Refresh rate
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()

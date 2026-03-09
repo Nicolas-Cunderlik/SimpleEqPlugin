@@ -79,7 +79,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     peakQualityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "Peak Quality", peakQualitySlider);
 
-    setSize(800, 400);
+    setSize(800, 450);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
@@ -117,8 +117,6 @@ void SimpleEQAudioProcessorEditor::resized()
                                       40,
                                       labelArea.getHeight());
     }
-
-    auto controlArea = bounds.reduced(10, 0);
 
     //------------------------------------------------
     // Main Flex (3 bands spaced evenly)
@@ -213,7 +211,7 @@ void SimpleEQAudioProcessorEditor::resized()
     mainFlex.items.add(juce::FlexItem(peakColumn).withWidth(330));
     mainFlex.items.add(juce::FlexItem(highCutColumn).withWidth(330));
 
-    mainFlex.performLayout(bounds);
+    mainFlex.performLayout(bounds.removeFromBottom(150));
 }
 
 void SimpleEQAudioProcessorEditor::styleSlider(juce::Slider& slider)
@@ -235,19 +233,20 @@ void SimpleEQAudioProcessorEditor::createFrequencyLabels()
         label->setText(f, juce::dontSendNotification);
         label->setJustificationType(juce::Justification::centred);
         label->setBorderSize(juce::BorderSize<int>(0));
+        label->setColour(juce::Label::textColourId, juce::Colour::fromRGBA(255, 255, 255, 150));
         addAndMakeVisible(*label);
         frequencyLabels.push_back(std::move(label));
     }
 }
 
 void SimpleEQAudioProcessorEditor::createSlopeButtons(std::vector<std::unique_ptr<juce::ToggleButton>>& buttons,
-    const juce::String& paramID,
-    int radioGroupId)
+    const juce::String& paramID, int radioGroupId)
 {
     std::array<int, 4> values = { 12, 24, 36, 48 };
 
-    if (auto* param = audioProcessor.apvts.getParameter(paramID) && param->getValue() == 0.0f)
-        param->setValueNotifyingHost(0.0f);
+    if (auto* param = audioProcessor.apvts.getParameter(paramID))
+        if (param->getValue() == 0.0f)
+            param->setValueNotifyingHost(0.0f);
 
     for (int i = 0; i < 4; ++i)
     {
