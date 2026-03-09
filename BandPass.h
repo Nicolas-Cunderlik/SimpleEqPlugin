@@ -22,19 +22,17 @@ public:
 
 	// These functions are my own implementations of high pass and low pass filters
 	static std::vector<Biquad> designButterworthHighpass(float cutoff,
-												  float sampleRate,
-												  int order);
+												  		 float sampleRate,
+												  		 int order);
 
 	static std::vector<Biquad> designButterworthLowpass(float cutoff,
-												 float sampleRate,
-												 int order);
+												 	    float sampleRate,
+												 		int order);
 
 	// These are helper functions for making Biquads
-	static Biquad makeFirstOrderHighpass(float cutoffFrequency,
-								  float sampleRate);
+	static Biquad makeFirstOrderHighpass(float cutoffFrequency, float sampleRate);
 
-	static Biquad makeFirstOrderLowpass(float cutoffFrequency,
-								 float sampleRate);
+	static Biquad makeFirstOrderLowpass(float cutoffFrequency, float sampleRate);
 
 	static Biquad makeBiquad(float cutoffFrequency, float sampleRate, float Q, FilterType type);
 

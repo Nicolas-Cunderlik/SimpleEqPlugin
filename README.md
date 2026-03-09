@@ -1,3 +1,10 @@
+Instructions:
+- The standalone .exe can be launched and used as-is
+
+- To use the plugin in a DAW, download the .vst3 plugin and move it to your common .vst3 directory, typically C:\Program Files\Common Files\VST3 on Windows
+- Then, refresh your plugin list (assuming it checks the directory) for it to appear
+- Find the plugin in your list of plugins and attach it to a mixer channel to use it
+
 This project is the beginning of my DSP journey.
 I plan to use it as a stepping stone for implementing a ML algorithm for polyphonic key detection and audio-to-MIDI conversion.
 

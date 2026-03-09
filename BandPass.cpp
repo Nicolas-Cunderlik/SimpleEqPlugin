@@ -5,9 +5,7 @@
 const float BandPass::PI_F = juce::MathConstants<float>::pi;
 
 // Highpass design
-std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff,
-    float sampleRate,
-    int order)
+std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff, float sampleRate, int order)
 {
     std::vector<Biquad> filters;
 
@@ -25,9 +23,7 @@ std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff,
 }
 
 // Lowpass design
-std::vector<BandPass::Biquad> BandPass::designButterworthLowpass(float cutoff,
-    float sampleRate,
-    int order)
+std::vector<BandPass::Biquad> BandPass::designButterworthLowpass(float cutoff, float sampleRate, int order)
 {
     std::vector<Biquad> filters;
 

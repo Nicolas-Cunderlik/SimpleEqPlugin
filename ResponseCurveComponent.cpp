@@ -35,19 +35,12 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     auto settings = getChainSettings(audioProcessor.apvts);
 
     auto peakCoefficients =
-        dsp::IIR::Coefficients<float>::makePeakFilter(
-            sampleRate,
-            settings.peakFreq,
-            settings.peakQuality,
-            Decibels::decibelsToGain(settings.peakGainInDecibels));
-    auto lowCutCoefficients =
-        dsp::IIR::Coefficients<float>::makeHighPass(
-            sampleRate,
-            settings.lowCutFreq);
-    auto highCutCoefficients =
-        dsp::IIR::Coefficients<float>::makeLowPass(
-            sampleRate,
-            settings.highCutFreq);
+        dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate,
+                                                      settings.peakFreq,
+                                                      settings.peakQuality,
+                                                      Decibels::decibelsToGain(settings.peakGainInDecibels));
+    auto lowCutCoefficients = dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, settings.lowCutFreq);
+    auto highCutCoefficients = dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, settings.highCutFreq);
 
     std::vector<double> mags;
     mags.resize(width);
@@ -94,18 +87,18 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 
     responseCurve.startNewSubPath(responseArea.getX(),
         jmap(mags[0],
-            -24.0,
-            24.0,
-            (double)responseArea.getBottom(),
-            (double)responseArea.getY()));
+             -24.0,
+             24.0,
+             (double)responseArea.getBottom(),
+             (double)responseArea.getY()));
 
     for (size_t i = 1; i < mags.size(); ++i)
     {
         auto y = jmap(mags[i],
-            -24.0,
-            24.0,
-            (double)responseArea.getBottom(),
-            (double)responseArea.getY());
+                      -24.0,
+                      24.0,
+                      (double)responseArea.getBottom(),
+                      (double)responseArea.getY());
 
         responseCurve.lineTo(responseArea.getX() + i, y);
     }
@@ -115,12 +108,13 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 
     // This gradient fade out makes the graph more appealing without a lot of styling
     auto fadeHeight = getHeight() * 0.25f;
-    juce::ColourGradient fade(
-        juce::Colours::transparentBlack,
-        0, getHeight() - fadeHeight,
-        juce::Colours::black.withAlpha(1.0f),
-        0, getHeight(),
-        false
+    juce::ColourGradient fade(juce::Colours::transparentBlack,
+                              0,
+                              getHeight() - fadeHeight,
+                              juce::Colours::black.withAlpha(1.0f),
+                              0,
+                              getHeight(),
+                              false
     );
     g.setGradientFill(fade);
     g.fillRect(getLocalBounds().withTop(getHeight() - fadeHeight));

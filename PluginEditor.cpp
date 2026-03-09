@@ -16,21 +16,20 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     auto customFont = juce::Font("Helvetica", 15.0f, juce::Font::plain);
     getLookAndFeel().setDefaultSansSerifTypefaceName("Helvetica");
 
-    setLookAndFeel(&eqLookAndFeel); // Set global style
+    setLookAndFeel(&eqLookAndFeel);
 
-    // Setup Titles
-    auto setupTitle = [this](juce::Label& l, juce::String text) {
+    auto setupTitle = [this](juce::Label& l, juce::String text)
+    {
         l.setText(text, juce::dontSendNotification);
         l.setJustificationType(juce::Justification::centred);
         l.setFont(juce::Font(14.0f, juce::Font::bold));
         addAndMakeVisible(l);
-        };
+    };
 
     setupTitle(lowCutTitle, "LOW CUT");
     setupTitle(peakTitle, "PEAK");
     setupTitle(highCutTitle, "HIGH CUT");
 
-    // Colors for the "Custom" Look
     getLookAndFeel().setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::cyan);
     getLookAndFeel().setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colours::grey.withAlpha(0.3f));
     getLookAndFeel().setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack); // Clean look
@@ -53,7 +52,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     styleSlider(lowcutSlider);
     styleSlider(peakFilterSlider);
     styleSlider(peakGainSlider);
-    peakGainSlider.setTextValueSuffix(" dB");
+    peakGainSlider.setTextValueSuffix(" dB"); // Suffix visually differentiates from quality slider
     styleSlider(peakQualitySlider);
 
     addAndMakeVisible(highcutSlider);
@@ -113,11 +112,10 @@ void SimpleEQAudioProcessorEditor::resized()
     {
         auto normX = juce::mapFromLog10(freqs[i], 20.f, 20000.f);
         int x = responseArea.getX() + normX * responseArea.getWidth();
-        frequencyLabels[i]->setBounds(
-            x - 20,
-            labelArea.getY(),
-            40,
-            labelArea.getHeight());
+        frequencyLabels[i]->setBounds(x - 20,
+                                      labelArea.getY(),
+                                      40,
+                                      labelArea.getHeight());
     }
 
     auto controlArea = bounds.reduced(10, 0);
@@ -248,11 +246,8 @@ void SimpleEQAudioProcessorEditor::createSlopeButtons(std::vector<std::unique_pt
 {
     std::array<int, 4> values = { 12, 24, 36, 48 };
 
-    if (auto* param = audioProcessor.apvts.getParameter(paramID))
-    {
-        if (param->getValue() == 0.0f)
-            param->setValueNotifyingHost(0.0f);
-    }
+    if (auto* param = audioProcessor.apvts.getParameter(paramID) && param->getValue() == 0.0f)
+        param->setValueNotifyingHost(0.0f);
 
     for (int i = 0; i < 4; ++i)
     {

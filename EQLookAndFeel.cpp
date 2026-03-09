@@ -27,8 +27,14 @@ void EQLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width,
     if (slider.isEnabled())
     {
         juce::Path valueArc;
-        valueArc.addCentredArc(bounds.getCentreX(), bounds.getCentreY(), arcRadius, arcRadius,
-            0.0f, rotaryStartAngle, toAngle, true);
+        valueArc.addCentredArc(bounds.getCentreX(),
+                               bounds.getCentreY(),
+                               arcRadius,
+                               arcRadius,
+                               0.0f,
+                               rotaryStartAngle,
+                               toAngle,
+                               true);
         g.setColour(fill);
         g.strokePath(valueArc, juce::PathStrokeType(lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
