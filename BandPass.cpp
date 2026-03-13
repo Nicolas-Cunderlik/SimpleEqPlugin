@@ -1,10 +1,8 @@
 #include "BandPass.h"
-#include <cmath>  // For sinf, cosf, tanf
+#include <cmath>
 
-// Define static constant
 const float BandPass::PI_F = juce::MathConstants<float>::pi;
 
-// Highpass design
 std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff, float sampleRate, int order)
 {
     std::vector<Biquad> filters;
@@ -22,7 +20,6 @@ std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff, 
     return filters;
 }
 
-// Lowpass design
 std::vector<BandPass::Biquad> BandPass::designButterworthLowpass(float cutoff, float sampleRate, int order)
 {
     std::vector<Biquad> filters;
@@ -40,7 +37,6 @@ std::vector<BandPass::Biquad> BandPass::designButterworthLowpass(float cutoff, f
     return filters;
 }
 
-// First-order highpass
 BandPass::Biquad BandPass::makeFirstOrderHighpass(float cutoffFrequency, float sampleRate)
 {
     const float K = tanf(PI_F * cutoffFrequency / sampleRate); // Pre-warped
@@ -56,7 +52,6 @@ BandPass::Biquad BandPass::makeFirstOrderHighpass(float cutoffFrequency, float s
     return bq;
 }
 
-// First-order lowpass
 BandPass::Biquad BandPass::makeFirstOrderLowpass(float cutoffFrequency, float sampleRate)
 {
     const float K = tanf(PI_F * cutoffFrequency / sampleRate); // Pre-warped
