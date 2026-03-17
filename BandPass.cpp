@@ -7,7 +7,7 @@ std::vector<BandPass::Biquad> BandPass::designButterworthHighpass(float cutoff, 
 {
     std::vector<Biquad> filters;
 
-    if (order % 2 == 1)  // Odd order -> first-order stage
+    if (order % 2 == 1)
         filters.push_back(makeFirstOrderHighpass(cutoff, sampleRate));
 
     int numStages = order / 2;
@@ -67,7 +67,6 @@ BandPass::Biquad BandPass::makeFirstOrderLowpass(float cutoffFrequency, float sa
     return bq;
 }
 
-// Second-order bandpass
 BandPass::Biquad BandPass::makeBiquad(float cutoffFrequency, float sampleRate, float Q, FilterType type)
 {
     const float W0 = 2.f * PI_F * cutoffFrequency / sampleRate;
@@ -106,6 +105,7 @@ BandPass::Biquad BandPass::makeBiquad(float cutoffFrequency, float sampleRate, f
     return bq;
 }
 
+// Typically JUCE filters are implemented using predefined classes, this converts biquads -> JUCE IIR Biquad Coefficients
 juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>
 BandPass::convertToCoefficients(const std::vector<Biquad>& biquads)
 {

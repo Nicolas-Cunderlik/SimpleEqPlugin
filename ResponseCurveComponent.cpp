@@ -76,7 +76,7 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 
         int lcOrder = settings.lowCutSlope;
         auto lcMag = lowCutCoefficients->getMagnitudeForFrequency(freq, sampleRate);
-        mag *= std::pow(lcMag, lcOrder + 1); // Raise to power of slope 
+        mag *= std::pow(lcMag, lcOrder + 1); // Raise to power of slope
 
         int hcOrder = settings.highCutSlope;
         auto hcMag = highCutCoefficients->getMagnitudeForFrequency(freq, sampleRate);
