@@ -81,22 +81,22 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
             peakGain);
 
     auto lowCutBiquads =
-        BandPass::designButterworthCutFilter(
+        IIRFilter::designButterworthCutFilter(
             settings.lowCutFreq,
             sampleRate,
             EQConstants::slopeToOrder(settings.lowCutSlope),
-            BandPass::FilterType::Highpass);
+            IIRFilter::FilterType::Highpass);
 
-    auto lowCutCoefficients = BandPass::convertToCoefficients(lowCutBiquads);
+    auto lowCutCoefficients = IIRFilter::convertToCoefficients(lowCutBiquads);
 
     auto highCutBiquads =
-        BandPass::designButterworthCutFilter(
+        IIRFilter::designButterworthCutFilter(
             settings.highCutFreq,
             sampleRate,
             EQConstants::slopeToOrder(settings.highCutSlope),
-            BandPass::FilterType::Lowpass);
+            IIRFilter::FilterType::Lowpass);
 
-    auto highCutCoefficients = BandPass::convertToCoefficients(highCutBiquads);
+    auto highCutCoefficients = IIRFilter::convertToCoefficients(highCutBiquads);
 
     std::vector<float> mags((size_t)width);
 

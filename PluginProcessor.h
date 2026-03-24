@@ -10,7 +10,7 @@
 
 #include <JuceHeader.h>
 #include <atomic>
-#include "BandPass.h"
+#include "IIRFilter.h"
 #include "ParamIDs.h"
 #include "EQConstants.h"
 

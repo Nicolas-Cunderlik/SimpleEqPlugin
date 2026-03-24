@@ -1,7 +1,7 @@
-#include "BandPass.h"
+#include "IIRFilter.h"
 #include <cmath>
 
-std::vector<BandPass::Biquad> BandPass::designButterworthCutFilter(float cutoff, float sampleRate, int order, FilterType type)
+std::vector<IIRFilter::Biquad> IIRFilter::designButterworthCutFilter(float cutoff, float sampleRate, int order, FilterType type)
 {
     std::vector<Biquad> filters;
 
@@ -20,7 +20,7 @@ std::vector<BandPass::Biquad> BandPass::designButterworthCutFilter(float cutoff,
     return filters;
 }
 
-BandPass::Biquad BandPass::makeFirstOrderBiquad(float cutoffFrequency, float sampleRate, FilterType type)
+IIRFilter::Biquad IIRFilter::makeFirstOrderBiquad(float cutoffFrequency, float sampleRate, FilterType type)
 {
     float k = tanf(juce::float_Pi * cutoffFrequency / sampleRate); // Pre-warped
     float norm = 1.f / (1.f + k);
@@ -37,7 +37,7 @@ BandPass::Biquad BandPass::makeFirstOrderBiquad(float cutoffFrequency, float sam
     return bq;
 }
 
-BandPass::Biquad BandPass::makeBiquad(float cutoffFrequency, float sampleRate, float Q, FilterType type)
+IIRFilter::Biquad IIRFilter::makeBiquad(float cutoffFrequency, float sampleRate, float Q, FilterType type)
 {
     float w0 = 2.f * juce::float_Pi * cutoffFrequency / sampleRate;
     float cos_w0 = cosf(w0);
@@ -78,7 +78,7 @@ BandPass::Biquad BandPass::makeBiquad(float cutoffFrequency, float sampleRate, f
 
 // Typically JUCE filters are implemented using predefined classes, this converts biquads -> JUCE IIR Biquad Coefficients
 juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>
-BandPass::convertToCoefficients(const std::vector<Biquad>& biquads)
+IIRFilter::convertToCoefficients(const std::vector<Biquad>& biquads)
 {
     juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> coeffs;
 

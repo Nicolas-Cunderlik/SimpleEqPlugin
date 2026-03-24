@@ -1,7 +1,7 @@
 #pragma once
 #include "JuceHeader.h"
 
-class BandPass
+class IIRFilter
 {
 public:
 	struct Biquad

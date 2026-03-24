@@ -268,11 +268,11 @@ void SimpleEQAudioProcessor::updateCoefficients(Coefficients &old, const Coeffic
 
 void SimpleEQAudioProcessor::updateLowCutFilters(const ChainSettings& chainSettings) 
 {
-    auto biquads = BandPass::designButterworthCutFilter(chainSettings.lowCutFreq,
+    auto biquads = IIRFilter::designButterworthCutFilter(chainSettings.lowCutFreq,
                                                        getSampleRate(),
                                                        EQConstants::slopeToOrder(chainSettings.lowCutSlope),
-                                                       BandPass::FilterType::Highpass);
-    auto cutCoefficients = BandPass::convertToCoefficients(biquads);
+                                                       IIRFilter::FilterType::Highpass);
+    auto cutCoefficients = IIRFilter::convertToCoefficients(biquads);
 
     auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
     auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
@@ -283,11 +283,11 @@ void SimpleEQAudioProcessor::updateLowCutFilters(const ChainSettings& chainSetti
 
 void SimpleEQAudioProcessor::updateHighCutFilters(const ChainSettings& chainSettings)
 {
-    auto biquads = BandPass::designButterworthCutFilter(chainSettings.highCutFreq,
+    auto biquads = IIRFilter::designButterworthCutFilter(chainSettings.highCutFreq,
                                                       getSampleRate(),
                                                       EQConstants::slopeToOrder(chainSettings.highCutSlope),
-                                                      BandPass::FilterType::Lowpass);
-    auto highCutCoefficients = BandPass::convertToCoefficients(biquads);
+                                                      IIRFilter::FilterType::Lowpass);
+    auto highCutCoefficients = IIRFilter::convertToCoefficients(biquads);
 
     auto& leftHighCut = leftChain.get<ChainPositions::HighCut>();
     auto& rightHighCut = rightChain.get<ChainPositions::HighCut>();
