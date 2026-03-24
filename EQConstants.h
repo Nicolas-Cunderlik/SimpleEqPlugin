@@ -7,6 +7,7 @@ namespace EQConstants
 enum class Slope {
     Slope_12, Slope_24, Slope_36, Slope_48
 };
+
 inline constexpr float minFrequencyHz = 20.0f;
 inline constexpr float maxFrequencyHz = 20000.0f;
 
@@ -26,7 +27,7 @@ inline constexpr std::array<int, 4> slopeDbPerOct
 };
 
 // Takes a Slope enum value and converts it to a filter order (2, 4, 6, or 8)
-inline constexpr int slopeToOrder(Slope slope)
+constexpr int slopeToOrder(Slope slope)
 {
     return 2 * ((int)slope + 1);
 }
