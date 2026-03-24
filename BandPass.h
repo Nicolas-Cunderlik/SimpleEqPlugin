@@ -3,36 +3,24 @@
 
 class BandPass
 {
-private:
-	static const float PI_F;
-
 public:
-	static struct Biquad
+	struct Biquad
 	{
 		float b0, b1, b2;
 		float a1, a2;
 	};
 
-	static enum class FilterType
+	enum class FilterType
 	{
 		Lowpass,
 		Highpass
 	};
 
-	// These functions are my own implementations of high pass and low pass filters
-	static std::vector<Biquad> designButterworthHighpass(float cutoff,
-												  		 float sampleRate,
-												  		 int order);
-
-	static std::vector<Biquad> designButterworthLowpass(float cutoff,
-												 	    float sampleRate,
-												 		int order);
+	// My own cut filter implementations
+	static std::vector<Biquad> designButterworthCutFilter(float cutoff, float sampleRate, int order, FilterType type);
 
 	// These are helper functions for making Biquads
-	static Biquad makeFirstOrderHighpass(float cutoffFrequency, float sampleRate);
-
-	static Biquad makeFirstOrderLowpass(float cutoffFrequency, float sampleRate);
-
+	static Biquad makeFirstOrderBiquad(float cutoffFrequency, float sampleRate, FilterType type);
 	static Biquad makeBiquad(float cutoffFrequency, float sampleRate, float Q, FilterType type);
 
 	static juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>

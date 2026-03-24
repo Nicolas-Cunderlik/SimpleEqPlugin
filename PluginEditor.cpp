@@ -11,20 +11,21 @@
 
 //==============================================================================
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), responseCurve(p)
+    : AudioProcessorEditor (&p)
+    , audioProcessor (p)
+    , responseCurve(p)
+    , highcutAttachment(audioProcessor.apvts, ParamIDs::highCutFreq, highcutSlider)
+    , lowcutAttachment(audioProcessor.apvts, ParamIDs::lowCutFreq, lowcutSlider)
+    , peakFilterAttachment(audioProcessor.apvts, ParamIDs::peakFreq, peakFilterSlider)
+    , peakGainAttachment(audioProcessor.apvts, ParamIDs::peakGain, peakGainSlider)
+    , peakQualityAttachment(audioProcessor.apvts, ParamIDs::peakQuality, peakQualitySlider)
 {
-    auto customFont = juce::Font("Helvetica", 15.0f, juce::Font::plain);
     getLookAndFeel().setDefaultSansSerifTypefaceName("Helvetica");
 
     setLookAndFeel(&eqLookAndFeel);
 
-    auto setupTitle = [this](juce::Label& l, juce::String text)
-    {
-        l.setText(text, juce::dontSendNotification);
-        l.setJustificationType(juce::Justification::centred);
-        l.setFont(juce::Font(14.0f, juce::Font::bold));
-        addAndMakeVisible(l);
-    };
+    audioProcessor.apvts.addParameterListener(ParamIDs::lowCutSlope, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::highCutSlope, this);
 
     setupTitle(lowCutTitle, "LOW CUT");
     setupTitle(peakTitle, "PEAK");
@@ -34,8 +35,8 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     getLookAndFeel().setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colours::grey.withAlpha(0.3f));
     getLookAndFeel().setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack); // Clean look
 
-    createSlopeButtons(lowCutButtons, "LowCut Slope", 1001);
-    createSlopeButtons(highCutButtons,  "HighCut Slope", 1002);
+    createSlopeButtons(lowCutButtons, ParamIDs::lowCutSlope, 1001);
+    createSlopeButtons(highCutButtons, ParamIDs::highCutSlope, 1002);
 
     // Add the unit labels
     lowCutSlopeUnitLabel.setText("dB/oct", juce::dontSendNotification);
@@ -48,12 +49,12 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
 
     addAndMakeVisible(responseCurve);
 
-    styleSlider(highcutSlider);
-    styleSlider(lowcutSlider);
-    styleSlider(peakFilterSlider);
-    styleSlider(peakGainSlider);
+    styleSlider(highcutSlider, juce::Slider::RotaryHorizontalVerticalDrag);
+    styleSlider(lowcutSlider, juce::Slider::RotaryHorizontalVerticalDrag);
+    styleSlider(peakFilterSlider, juce::Slider::RotaryHorizontalVerticalDrag);
+    styleSlider(peakGainSlider, juce::Slider::LinearVertical);
     peakGainSlider.setTextValueSuffix(" dB"); // Suffix visually differentiates from quality slider
-    styleSlider(peakQualitySlider);
+    styleSlider(peakQualitySlider, juce::Slider::LinearVertical);
 
     addAndMakeVisible(highcutSlider);
     addAndMakeVisible(lowcutSlider);
@@ -62,28 +63,16 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     addAndMakeVisible(peakQualitySlider);
 
     createFrequencyLabels();
-
-    // Attach parameters
-    highcutAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "HighCut Freq", highcutSlider);
-
-    lowcutAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "LowCut Freq", lowcutSlider);
-
-    peakFilterAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "Peak Freq", peakFilterSlider);
-
-    peakGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "Peak Gain", peakGainSlider);
-
-    peakQualityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "Peak Quality", peakQualitySlider);
+    syncSlopeButtons();
 
     setSize(800, 450);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
+    cancelPendingUpdate();
+    audioProcessor.apvts.removeParameterListener(ParamIDs::lowCutSlope, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::highCutSlope, this);
     setLookAndFeel(nullptr); // Crucial to prevent crashes
 }
 
@@ -91,12 +80,6 @@ SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 void SimpleEQAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
-
-    g.setColour(primaryColor2);
-    g.setFont(juce::Font(24.0f, juce::Font::bold));
-    g.drawFittedText("Equalizer Plugin",
-                     getLocalBounds().removeFromTop(40),
-                     juce::Justification::centred, 1);
 }
 
 void SimpleEQAudioProcessorEditor::resized()
@@ -108,14 +91,13 @@ void SimpleEQAudioProcessorEditor::resized()
 
     // Frequency labels
     auto labelArea = bounds.removeFromTop(20);
-    for (size_t i = 0; i < freqs.size(); ++i)
+    for (size_t i = 0; i < EQConstants::frequenciesHz.size(); ++i)
     {
-        auto normX = juce::mapFromLog10(freqs[i], 20.f, 20000.f);
+        auto normX = juce::mapFromLog10(EQConstants::frequenciesHz[i],
+                                        EQConstants::minFrequencyHz,
+                                        EQConstants::maxFrequencyHz);
         int x = responseArea.getX() + normX * responseArea.getWidth();
-        frequencyLabels[i]->setBounds(x - 20,
-                                      labelArea.getY(),
-                                      40,
-                                      labelArea.getHeight());
+        frequencyLabels[i].setBounds(x - 20, labelArea.getY(), 40, labelArea.getHeight());
     }
 
     //------------------------------------------------
@@ -140,7 +122,7 @@ void SimpleEQAudioProcessorEditor::resized()
     lowCutButtonsBox.flexDirection = juce::FlexBox::Direction::column;
     lowCutButtonsBox.items.add(juce::FlexItem().withHeight(10).withFlex(0, 0, 0));
     for (auto& btn : lowCutButtons)
-        lowCutButtonsBox.items.add(juce::FlexItem(*btn).withHeight(18).withWidth(90).withFlex(0, 0, 0));
+        lowCutButtonsBox.items.add(juce::FlexItem(btn).withHeight(18).withWidth(90).withFlex(0, 0, 0));
     lowCutButtonsBox.items.add(juce::FlexItem().withHeight(3).withFlex(0, 0, 0));
     lowCutButtonsBox.items.add(juce::FlexItem(lowCutSlopeUnitLabel).withHeight(20).withWidth(90).withFlex(0, 0, 0));
 
@@ -164,10 +146,6 @@ void SimpleEQAudioProcessorEditor::resized()
     peakRow.flexDirection = juce::FlexBox::Direction::row;
     peakRow.alignItems = juce::FlexBox::AlignItems::center;
 
-    // It's redundant work, but the peak sliders should be restyled again as vertical
-    peakGainSlider.setSliderStyle(juce::Slider::LinearVertical);
-    peakQualitySlider.setSliderStyle(juce::Slider::LinearVertical);
-
     peakRow.items.add(juce::FlexItem(peakFilterSlider).withHeight(100).withWidth(100));
     peakRow.items.add(juce::FlexItem(peakGainSlider).withHeight(100).withWidth(50));
     peakRow.items.add(juce::FlexItem(peakQualitySlider).withHeight(100).withWidth(50));
@@ -190,7 +168,7 @@ void SimpleEQAudioProcessorEditor::resized()
     highCutButtonsBox.flexDirection = juce::FlexBox::Direction::column;
     highCutButtonsBox.items.add(juce::FlexItem().withHeight(10).withFlex(0, 0, 0));
     for (auto& btn : highCutButtons)
-        highCutButtonsBox.items.add(juce::FlexItem(*btn).withHeight(18).withWidth(90).withFlex(0, 0, 0));
+        highCutButtonsBox.items.add(juce::FlexItem(btn).withHeight(18).withWidth(90).withFlex(0, 0, 0));
     highCutButtonsBox.items.add(juce::FlexItem().withHeight(3).withFlex(0, 0, 0));
     highCutButtonsBox.items.add(juce::FlexItem(highCutSlopeUnitLabel).withHeight(20).withWidth(90).withFlex(0, 0, 0));
 
@@ -214,9 +192,17 @@ void SimpleEQAudioProcessorEditor::resized()
     mainFlex.performLayout(bounds.removeFromBottom(150));
 }
 
-void SimpleEQAudioProcessorEditor::styleSlider(juce::Slider& slider)
+void SimpleEQAudioProcessorEditor::setupTitle(juce::Label& label, const juce::String& text)
 {
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    label.setText(text, juce::dontSendNotification);
+    label.setJustificationType(juce::Justification::centred);
+    label.setFont(juce::Font(14.0f, juce::Font::bold));
+    addAndMakeVisible(label);
+}
+
+void SimpleEQAudioProcessorEditor::styleSlider(juce::Slider& slider, juce::Slider::SliderStyle style)
+{
+    slider.setSliderStyle(style);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 60, 10);
     // This removes the border around the value readout box
     slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -224,58 +210,70 @@ void SimpleEQAudioProcessorEditor::styleSlider(juce::Slider& slider)
 
 void SimpleEQAudioProcessorEditor::createFrequencyLabels()
 {
-    std::array<juce::String, 9> freqs =
-    { "20","50","100","200","500","1k","5k","10k","20k" };
-
-    for (auto& f : freqs)
+    for (size_t i = 0; i < EQConstants::frequencyLabels.size(); ++i)
     {
-        auto label = std::make_unique<juce::Label>();
-        label->setText(f, juce::dontSendNotification);
-        label->setJustificationType(juce::Justification::centred);
-        label->setBorderSize(juce::BorderSize<int>(0));
-        label->setColour(juce::Label::textColourId, juce::Colour::fromRGBA(255, 255, 255, 150));
-        addAndMakeVisible(*label);
-        frequencyLabels.push_back(std::move(label));
+        auto& label = frequencyLabels[i];
+        label.setText(EQConstants::frequencyLabels[i], juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        label.setBorderSize(juce::BorderSize<int>(0));
+        label.setColour(juce::Label::textColourId, juce::Colour::fromRGBA(255, 255, 255, 150));
+        addAndMakeVisible(label);
     }
 }
 
-void SimpleEQAudioProcessorEditor::createSlopeButtons(std::vector<std::unique_ptr<juce::ToggleButton>>& buttons,
-    const juce::String& paramID, int radioGroupId)
+// The slope buttons need manual handling since they don't use attachments like the sliders.
+// Attachments do not make sense because the buttons represent multiple discrete values for a single parameter, not a continous range.
+// Could this be done better? Probably with a custom component but I'm not doing all that shit
+void SimpleEQAudioProcessorEditor::createSlopeButtons(std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()>& buttons,
+                                                     const juce::String& paramID,
+                                                     int radioGroupId)
 {
-    std::array<int, 4> values = { 12, 24, 36, 48 };
-
-    if (auto* param = audioProcessor.apvts.getParameter(paramID))
-        if (param->getValue() == 0.0f)
-            param->setValueNotifyingHost(0.0f);
-
-    for (int i = 0; i < 4; ++i)
+    for (size_t i = 0; i < buttons.size(); ++i)
     {
-        auto btn = std::make_unique<juce::ToggleButton>(juce::String(values[i]));
-        btn->setRadioGroupId(radioGroupId);
-        addAndMakeVisible(*btn);
+        auto& btn = buttons[i];
+        btn.setButtonText(juce::String(EQConstants::slopeDbPerOct[i]));
+        btn.setRadioGroupId(radioGroupId);
+        addAndMakeVisible(btn);
 
-        btn->onClick = [this, btnPtr = btn.get(), paramID, val = values[i]]()
-            {
-                if (auto* param = audioProcessor.apvts.getParameter(paramID))
-                {
-                    float normalized = (val - 12) / 36.0f;
-                    param->beginChangeGesture();
-                    param->setValueNotifyingHost(normalized);
-                    param->endChangeGesture();
-                }
-
-                auto& targetButtons = (paramID == "LowCut Slope" ? lowCutButtons : highCutButtons);
-                for (auto& b : targetButtons)
-                    b->setToggleState(b.get() == btnPtr, juce::dontSendNotification);
-            };
-
-        buttons.push_back(std::move(btn));
+        btn.onClick = [this, paramID, index = (int)i]
+        {
+            slopeButtonClicked(paramID, index);
+        };
     }
+}
 
+void SimpleEQAudioProcessorEditor::slopeButtonClicked(const juce::String& paramID, int index)
+{
     if (auto* param = audioProcessor.apvts.getParameter(paramID))
     {
-        float val = param->getValue() * 36.0f + 12;
-        for (auto& b : buttons)
-            b->setToggleState(b->getButtonText().getIntValue() == (int)val, juce::dontSendNotification);
+        param->beginChangeGesture();
+        param->setValueNotifyingHost(param->convertTo0to1((float)index));
+        param->endChangeGesture();
     }
+
+    syncSlopeButtons();
+}
+
+void SimpleEQAudioProcessorEditor::syncSlopeButtons()
+{
+    auto lowIndex = (int)audioProcessor.apvts.getRawParameterValue(ParamIDs::lowCutSlope)->load();
+    auto highIndex = (int)audioProcessor.apvts.getRawParameterValue(ParamIDs::highCutSlope)->load();
+
+    for (size_t i = 0; i < lowCutButtons.size(); ++i)
+        lowCutButtons[i].setToggleState((int)i == lowIndex, juce::dontSendNotification);
+    for (size_t i = 0; i < highCutButtons.size(); ++i)
+        highCutButtons[i].setToggleState((int)i == highIndex, juce::dontSendNotification);
+}
+
+void SimpleEQAudioProcessorEditor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    juce::ignoreUnused(newValue);
+
+    if (parameterID == ParamIDs::lowCutSlope || parameterID == ParamIDs::highCutSlope)
+        triggerAsyncUpdate();
+}
+
+void SimpleEQAudioProcessorEditor::handleAsyncUpdate()
+{
+    syncSlopeButtons();
 }

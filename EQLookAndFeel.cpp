@@ -44,8 +44,10 @@ void EQLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width,
     float sliderPos, float minSliderPos, float maxSliderPos,
     const juce::Slider::SliderStyle style, juce::Slider& slider)
 {
+	juce::ignoreUnused(minSliderPos, maxSliderPos, style);
+
     auto trackWidth = 6.0f;
-    auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(width * 0.25f, 0.0f);
+    auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(width * 0.25f, 0.0f);
     auto trackX = bounds.getCentreX() - (trackWidth * 0.5f);
     juce::Path trackPath;
     trackPath.addRoundedRectangle(trackX, bounds.getY(), trackWidth, bounds.getHeight(), trackWidth * 0.5f);
@@ -68,14 +70,15 @@ void EQLookAndFeel::drawTickBox(juce::Graphics& g, juce::Component& btn,
     bool ticked, bool isEnabled,
     bool isMouseOver, bool isButtonDown)
 {
+	juce::ignoreUnused(isEnabled, isMouseOver, isButtonDown);
+
     auto bounds = juce::Rectangle<float>(x, y, w, h).reduced(2.0f);
     g.setColour(btn.findColour(juce::ToggleButton::tickDisabledColourId).withAlpha(0.1f));
-    g.fillRoundedRectangle(bounds, 3.0f);
+    g.fillRoundedRectangle(bounds, 8.0f);
 
     if (ticked)
     {
         g.setColour(juce::Colours::cyan);
-        g.drawRoundedRectangle(bounds, 3.0f, 2.0f);
-        g.fillRoundedRectangle(bounds.reduced(3.0f), 2.0f);
+        g.fillRoundedRectangle(bounds, 8.0f);
     }
 }

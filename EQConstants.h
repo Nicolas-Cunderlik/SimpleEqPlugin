@@ -1,0 +1,33 @@
+#pragma once
+
+#include <array>
+
+namespace EQConstants
+{
+enum class Slope {
+    Slope_12, Slope_24, Slope_36, Slope_48
+};
+inline constexpr float minFrequencyHz = 20.0f;
+inline constexpr float maxFrequencyHz = 20000.0f;
+
+inline constexpr std::array<float, 9> frequenciesHz
+{
+    20.0f, 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 5000.0f, 10000.0f, 20000.0f
+};
+
+inline constexpr std::array<const char*, 9> frequencyLabels
+{
+    "20", "50", "100", "200", "500", "1k", "5k", "10k", "20k"
+};
+
+inline constexpr std::array<int, 4> slopeDbPerOct
+{
+    12, 24, 36, 48
+};
+
+// Takes a Slope enum value and converts it to a filter order (2, 4, 6, or 8)
+inline constexpr int slopeToOrder(Slope slope)
+{
+    return 2 * ((int)slope + 1);
+}
+}

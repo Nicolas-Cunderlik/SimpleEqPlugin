@@ -1,13 +1,32 @@
 #include "ResponseCurveComponent.h"
+#include "ParamIDs.h"
 
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p)
     : audioProcessor(p)
 {
-    startTimerHz(30); // Refresh rate
+    audioProcessor.apvts.addParameterListener(ParamIDs::lowCutFreq, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::highCutFreq, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::peakFreq, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::peakGain, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::peakQuality, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::lowCutSlope, this);
+    audioProcessor.apvts.addParameterListener(ParamIDs::highCutSlope, this);
+
+	lastParameterChangeMs = juce::Time::getMillisecondCounter();
+    repaint();
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()
 {
+    stopTimer();
+
+    audioProcessor.apvts.removeParameterListener(ParamIDs::lowCutFreq, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::highCutFreq, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::peakFreq, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::peakGain, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::peakQuality, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::lowCutSlope, this);
+    audioProcessor.apvts.removeParameterListener(ParamIDs::highCutSlope, this);
 }
 
 void ResponseCurveComponent::resized()
@@ -17,105 +36,141 @@ void ResponseCurveComponent::resized()
 void ResponseCurveComponent::timerCallback()
 {
     repaint();
+
+    auto elapsedMs = juce::Time::getMillisecondCounter() - lastParameterChangeMs;
+    if (elapsedMs > 1000)
+        stopTimer();
+}
+
+void ResponseCurveComponent::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    juce::ignoreUnused(parameterID, newValue);
+	lastParameterChangeMs = juce::Time::getMillisecondCounter();
+    triggerAsyncUpdate();
+}
+
+void ResponseCurveComponent::handleAsyncUpdate()
+{
+    startTimerHz(30);
+    repaint();
 }
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
-    using namespace juce;
+    g.fillAll(juce::Colours::black);
 
-    g.fillAll(Colours::black);
+    const auto bounds = getLocalBounds();
+    const auto width = bounds.getWidth();
+    const auto height = bounds.getHeight();
 
-    auto bounds = getLocalBounds();
-    auto responseArea = bounds;
+    juce::Path responseCurve;
 
-    Path responseCurve;
+    const auto sampleRate = (float)audioProcessor.getSampleRate();
+    if (width <= 0 || sampleRate <= 0.0f)
+        return;
 
-    auto width = responseArea.getWidth();
-    auto sampleRate = audioProcessor.getSampleRate();
-    auto settings = getChainSettings(audioProcessor.apvts);
+    const auto settings = getChainSettings(audioProcessor.apvts);
+
+    const auto peakGain = juce::Decibels::decibelsToGain(settings.peakGainInDecibels);
 
     auto peakCoefficients =
-        dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate,
-                                                      settings.peakFreq,
-                                                      settings.peakQuality,
-                                                      Decibels::decibelsToGain(settings.peakGainInDecibels));
-    auto lowCutCoefficients = dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, settings.lowCutFreq);
-    auto highCutCoefficients = dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, settings.highCutFreq);
+        juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+            sampleRate,
+            settings.peakFreq,
+            settings.peakQuality,
+            peakGain);
 
-    std::vector<double> mags;
-    mags.resize(width);
+    auto lowCutBiquads =
+        BandPass::designButterworthCutFilter(
+            settings.lowCutFreq,
+            sampleRate,
+            EQConstants::slopeToOrder(settings.lowCutSlope),
+            BandPass::FilterType::Highpass);
 
-    // Grid lines for visualizing the frequency range
-    std::array<float, 9> freqs
+    auto lowCutCoefficients = BandPass::convertToCoefficients(lowCutBiquads);
+
+    auto highCutBiquads =
+        BandPass::designButterworthCutFilter(
+            settings.highCutFreq,
+            sampleRate,
+            EQConstants::slopeToOrder(settings.highCutSlope),
+            BandPass::FilterType::Lowpass);
+
+    auto highCutCoefficients = BandPass::convertToCoefficients(highCutBiquads);
+
+    std::vector<float> mags((size_t)width);
+
+    // Grid lines
+    g.setColour(juce::Colours::grey.withAlpha(0.5f));
+
+    for (auto f : EQConstants::frequenciesHz)
     {
-        20, 50, 100, 200, 500, 1000, 5000, 10000, 20000
-    };
-    g.setColour(Colours::grey.withAlpha(0.5f));
+        const float normX =
+            juce::mapFromLog10(f,
+                EQConstants::minFrequencyHz,
+                EQConstants::maxFrequencyHz);
 
-    for (auto f : freqs)
-    {
-        auto normX = mapFromLog10(f, 20.f, 20000.f);
-        float x = responseArea.getX() + normX * responseArea.getWidth();
+        const float x = bounds.getX() + normX * (float)width;
 
         g.drawLine(x,
-                   (float)responseArea.getY(),
-                   x,
-                   (float)responseArea.getBottom() + 10.0f,
-                   1.0f);
+            (float)bounds.getY(),
+            x,
+            (float)bounds.getBottom() + 10.0f,
+            1.0f);
     }
-    
-    // Magnitude representing the filter states
-    for (int i = 0; i < width; i++)
-    {
-        double mag = 1.0;
-        double normX = (double)i / (double)width;
-        double freq = mapToLog10(normX, 20.0, 20000.0);
 
-        // 1. Peak is always the same
+    // Magnitude calculation
+    for (size_t i = 0; i < mags.size(); ++i)
+    {
+        const float normX = (float)i / (float)width;
+        const float freq =
+            juce::mapToLog10(normX,
+                (float)EQConstants::minFrequencyHz,
+                (float)EQConstants::maxFrequencyHz);
+
+        float mag = 1.0f;
+
         mag *= peakCoefficients->getMagnitudeForFrequency(freq, sampleRate);
 
-        int lcOrder = settings.lowCutSlope;
-        auto lcMag = lowCutCoefficients->getMagnitudeForFrequency(freq, sampleRate);
-        mag *= std::pow(lcMag, lcOrder + 1); // Raise to power of slope
+        for (auto* c : lowCutCoefficients)
+            mag *= c->getMagnitudeForFrequency(freq, sampleRate);
 
-        int hcOrder = settings.highCutSlope;
-        auto hcMag = highCutCoefficients->getMagnitudeForFrequency(freq, sampleRate);
-        mag *= std::pow(hcMag, hcOrder + 1); // Raise to power of slope
+        for (auto* c : highCutCoefficients)
+            mag *= c->getMagnitudeForFrequency(freq, sampleRate);
 
-        mags[i] = Decibels::gainToDecibels(mag);
+        mags[i] = juce::Decibels::gainToDecibels(mag);
     }
 
-    responseCurve.startNewSubPath(responseArea.getX(),
-        jmap(mags[0],
-             -24.0,
-             24.0,
-             (double)responseArea.getBottom(),
-             (double)responseArea.getY()));
+    responseCurve.startNewSubPath(
+        (float)bounds.getX(),
+        juce::jmap(mags[0],
+            -24.0f, 24.0f,
+            (float)bounds.getBottom(),
+            (float)bounds.getY()));
 
     for (size_t i = 1; i < mags.size(); ++i)
     {
-        auto y = jmap(mags[i],
-                      -24.0,
-                      24.0,
-                      (double)responseArea.getBottom(),
-                      (double)responseArea.getY());
+        const float y =
+            juce::jmap(mags[i],
+                -24.0f, 24.0f,
+                (float)bounds.getBottom(),
+                (float)bounds.getY());
 
-        responseCurve.lineTo(responseArea.getX() + i, y);
+        responseCurve.lineTo(bounds.getX() + (float)i, y);
     }
 
-    g.setColour(Colours::white);
-    g.strokePath(responseCurve, PathStrokeType(2.f));
+    g.setColour(juce::Colours::white);
+    g.strokePath(responseCurve, juce::PathStrokeType(2.0f));
 
-    // This gradient fade out makes the graph more appealing without a lot of styling
-    auto fadeHeight = getHeight() * 0.25f;
-    juce::ColourGradient fade(juce::Colours::transparentBlack,
-                              0,
-                              getHeight() - fadeHeight,
-                              juce::Colours::black.withAlpha(1.0f),
-                              0,
-                              getHeight(),
-                              false
-    );
+    const float fadeHeight = height * 0.25f;
+
+    juce::ColourGradient fade(
+        juce::Colours::transparentBlack,
+        0.0f, height - fadeHeight,
+        juce::Colours::black.withAlpha(1.0f),
+        0.0f, height,
+        false);
+
     g.setGradientFill(fade);
-    g.fillRect(getLocalBounds().withTop(getHeight() - fadeHeight));
+    g.fillRect(bounds.withTop((int)(height - fadeHeight)));
 }

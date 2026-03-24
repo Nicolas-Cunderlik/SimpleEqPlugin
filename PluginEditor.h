@@ -12,11 +12,15 @@
 #include "PluginProcessor.h"
 #include "ResponseCurveComponent.h"
 #include "EQLookAndFeel.h"
+#include "EQConstants.h"
+#include "ParamIDs.h"
 
 //==============================================================================
 /**
 */
 class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor
+                                   , private juce::AudioProcessorValueTreeState::Listener
+                                   , private juce::AsyncUpdater
 {
 public:
     SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor&);
@@ -26,12 +30,10 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    const std::array<float, 9> freqs
-    {
-        20.f, 50.f, 100.f, 200.f, 500.f, 1000.f, 5000.f, 10000.f, 20000.f
-    };
-
 private:
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
+    void handleAsyncUpdate() override;
+
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     SimpleEQAudioProcessor& audioProcessor;
@@ -49,37 +51,33 @@ private:
     juce::Slider peakGainSlider;     // Range: -36 to +36
     juce::Slider peakQualitySlider;
 
-    std::vector<std::unique_ptr<juce::ToggleButton>> lowCutButtons, highCutButtons;
-    juce::FlexBox lowCutSlopeFlex, highCutSlopeFlex;
+    std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()> lowCutButtons;
+    std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()> highCutButtons;
     juce::Label lowCutSlopeUnitLabel, highCutSlopeUnitLabel;
 
     juce::Label lowCutTitle;
     juce::Label peakTitle;
     juce::Label highCutTitle;
 
-    std::vector<std::unique_ptr<juce::Label>> frequencyLabels;
+    std::array<juce::Label, EQConstants::frequenciesHz.size()> frequencyLabels;
 
     // Attachments to link GUI elements with parameters in the processor
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highcutAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowcutAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> peakFilterAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> peakGainAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> peakQualityAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> highcutSlopeAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> lowcutSlopeAttachment;
-
-    // Define primary colours from your hex codes
-    juce::Colour primaryColor1{ juce::Colour::fromString("#09122C") };
-    juce::Colour primaryColor2{ juce::Colour::fromString("#872341") };
-    juce::Colour primaryColor3{ juce::Colour::fromString("#BE3144") };
-    juce::Colour primaryColor4{ juce::Colour::fromString("#E17564") };
+    juce::AudioProcessorValueTreeState::SliderAttachment highcutAttachment;
+    juce::AudioProcessorValueTreeState::SliderAttachment lowcutAttachment;
+    juce::AudioProcessorValueTreeState::SliderAttachment peakFilterAttachment;
+    juce::AudioProcessorValueTreeState::SliderAttachment peakGainAttachment;
+    juce::AudioProcessorValueTreeState::SliderAttachment peakQualityAttachment;
 
     // Styling helpers
-    void styleSlider(juce::Slider&);
+    void setupTitle(juce::Label&, const juce::String&);
+    void styleSlider(juce::Slider&, juce::Slider::SliderStyle);
     void createFrequencyLabels();
-    void createSlopeButtons(std::vector<std::unique_ptr<juce::ToggleButton>>& buttons,
-        const juce::String& paramID,
-        int radioGroupId);
+
+    void createSlopeButtons(std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()>& buttons,
+                            const juce::String& paramID,
+                            int radioGroupId);
+    void slopeButtonClicked(const juce::String& paramID, int index);
+    void syncSlopeButtons();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
