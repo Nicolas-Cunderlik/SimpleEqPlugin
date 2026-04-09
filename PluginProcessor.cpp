@@ -101,6 +101,16 @@ const juce::String SimpleEQAudioProcessor::getProgramName (int index)
     return {};
 }
 
+juce::AbstractFifo& SimpleEQAudioProcessor::getFilteredBufferFifo() noexcept
+{
+    return filteredBufferFifo;
+}
+
+const juce::AudioBuffer<float>& SimpleEQAudioProcessor::getFilteredMonoBuffer() const noexcept
+{
+    return filteredMonoBuffer;
+}
+
 void SimpleEQAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
 }
@@ -121,8 +131,11 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 
     updateFilters();
     filtersNeedUpdate.store(false);
-}
 
+    filteredBufferFifo.setTotalSize(samplesPerBlock * EQConstants::SpectrumAnalyzerBufferSizeMultiplier);
+    filteredBufferFifo.reset();
+    filteredMonoBuffer.setSize(1, samplesPerBlock * EQConstants::SpectrumAnalyzerBufferSizeMultiplier, false, false, true);
+}
 
 void SimpleEQAudioProcessor::releaseResources()
 {
@@ -193,6 +206,49 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
         auto rightBlock = block.getSingleChannelBlock(1);
         juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
         rightChain.process(rightContext);
+    }
+
+    // The chosen FIFO policy is to skip new
+    if (filteredBufferFifo.getFreeSpace() >= buffer.getNumSamples())
+    {
+        pushFilteredMonoAudioToFifo(block);
+    }
+}
+//
+//void SimpleEQAudioProcessor::pushFilteredMonoAudioToFifo(const juce::dsp::AudioBlock<float>& block)
+//{
+//    const auto numChannels = block.getNumChannels();
+//    auto writeHandle = filteredBufferFifo.write(block.getNumSamples());
+//
+//	for (size_t i = 0; i < writeHandle.blockSize1 + writeHandle.blockSize2; ++i)
+//    {
+//        float sample = 0.0f;
+//        auto index = (i < writeHandle.blockSize1)
+//                     ? writeHandle.startIndex1 + i
+//                     : writeHandle.startIndex2 + (i - writeHandle.blockSize1);
+//		for (size_t channel = 0; channel < numChannels; ++channel)
+//            sample += block.getChannelPointer(channel)[index];
+//
+//        filteredMonoBuffer.setSample(0, index, filteredMonoBuffer.getSample(0, index) / numChannels);
+//    }
+//}
+
+void SimpleEQAudioProcessor::pushFilteredMonoAudioToFifo(const juce::dsp::AudioBlock<float>& block)
+{
+    const auto numChannels = block.getNumChannels();
+    auto writeHandle = filteredBufferFifo.write(block.getNumSamples());
+
+    for (size_t i = 0; i < writeHandle.blockSize1 + writeHandle.blockSize2; ++i)
+    {
+        float sample = 0.0f;
+        for (size_t channel = 0; channel < numChannels; ++channel)
+            sample += block.getChannelPointer(channel)[i];
+
+        const int fifoIndex = (i < static_cast<size_t>(writeHandle.blockSize1))
+            ? writeHandle.startIndex1 + static_cast<int>(i)
+            : writeHandle.startIndex2 + static_cast<int>(i) - writeHandle.blockSize1;
+
+        filteredMonoBuffer.setSample(0, fifoIndex, sample / numChannels);
     }
 }
 

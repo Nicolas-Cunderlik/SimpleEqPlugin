@@ -38,7 +38,7 @@ void ResponseCurveComponent::timerCallback()
     repaint();
 
     auto elapsedMs = juce::Time::getMillisecondCounter() - lastParameterChangeMs;
-    if (elapsedMs > 1000)
+    if (elapsedMs > noParameterChangeThresholdMs)
         stopTimer();
 }
 
@@ -51,14 +51,12 @@ void ResponseCurveComponent::parameterChanged(const juce::String& parameterID, f
 
 void ResponseCurveComponent::handleAsyncUpdate()
 {
-    startTimerHz(30);
+    startTimerHz(timerSpeedHz);
     repaint();
 }
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colours::black);
-
     const auto bounds = getLocalBounds();
     const auto width = bounds.getWidth();
     const auto height = bounds.getHeight();

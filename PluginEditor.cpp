@@ -14,6 +14,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     : AudioProcessorEditor (&p)
     , audioProcessor (p)
     , responseCurve(p)
+	, spectrumVisualizer(p)
     , highcutAttachment(audioProcessor.apvts, ParamIDs::highCutFreq, highcutSlider)
     , lowcutAttachment(audioProcessor.apvts, ParamIDs::lowCutFreq, lowcutSlider)
     , peakFilterAttachment(audioProcessor.apvts, ParamIDs::peakFreq, peakFilterSlider)
@@ -47,6 +48,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     highCutSlopeUnitLabel.setJustificationType(juce::Justification::left);
     addAndMakeVisible(highCutSlopeUnitLabel);
 
+    addAndMakeVisible(spectrumVisualizer);
     addAndMakeVisible(responseCurve);
 
     styleSlider(highcutSlider, juce::Slider::RotaryHorizontalVerticalDrag);
@@ -87,6 +89,7 @@ void SimpleEQAudioProcessorEditor::resized()
     auto bounds = getLocalBounds().reduced(20);
 
     auto responseArea = bounds.removeFromTop(200).reduced(20, 0);
+	spectrumVisualizer.setBounds(responseArea);
     responseCurve.setBounds(responseArea);
 
     // Frequency labels

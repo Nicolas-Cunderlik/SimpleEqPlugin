@@ -22,7 +22,10 @@ private:
     void handleAsyncUpdate() override;
 
     SimpleEQAudioProcessor& audioProcessor;
+
     uint32_t lastParameterChangeMs = 0;
+    const uint32_t noParameterChangeThresholdMs = 1000;
+    const uint8_t timerSpeedHz = 30;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ResponseCurveComponent)
 };

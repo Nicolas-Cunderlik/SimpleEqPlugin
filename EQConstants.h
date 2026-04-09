@@ -2,6 +2,9 @@
 
 #include <array>
 
+//------------------------------------------------
+// Constants for the filters and response curve
+//------------------------------------------------
 namespace EQConstants
 {
 enum class Slope {
@@ -31,4 +34,12 @@ constexpr int slopeToOrder(Slope slope)
 {
     return 2 * ((int)slope + 1);
 }
+
+//------------------------------------------------
+// Constants for the spectrum analyzer
+//------------------------------------------------
+inline constexpr size_t STFTOrder = 10;
+inline constexpr size_t STFTSize = 2 << STFTOrder - 1; 
+// This is how big the buffer and fifo are relative to host-provided buffer size
+inline constexpr size_t SpectrumAnalyzerBufferSizeMultiplier = 4;
 }

@@ -16,10 +16,14 @@
 
 struct ChainSettings
 {
-    float peakFreq{ 0 }, peakGainInDecibels{ 0 }, peakQuality{ 1.f };
-    float lowCutFreq{ 0 }, highCutFreq{ 0 };
+    float peakFreq{ 0 },
+          peakGainInDecibels{ 0 },
+          peakQuality{ 1.f },
+		  lowCutFreq{ 0 },
+          highCutFreq{ 0 };
 
-    EQConstants::Slope lowCutSlope{ EQConstants::Slope::Slope_12 }, highCutSlope{ EQConstants::Slope::Slope_12 };
+    EQConstants::Slope lowCutSlope{ EQConstants::Slope::Slope_12 },
+                       highCutSlope{ EQConstants::Slope::Slope_12 };
 };
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
@@ -71,7 +75,13 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameterLayout() };
 
+    juce::AbstractFifo& getFilteredBufferFifo() noexcept;
+	const juce::AudioBuffer<float>& getFilteredMonoBuffer() const noexcept;
+	void pushFilteredMonoAudioToFifo(const juce::dsp::AudioBlock<float>& block);
+
 private:
+    juce::AbstractFifo filteredBufferFifo{ EQConstants::STFTSize };
+    juce::AudioBuffer<float> filteredMonoBuffer { 1, EQConstants::STFTSize };
 
     using Filter = juce::dsp::IIR::Filter<float>;
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;

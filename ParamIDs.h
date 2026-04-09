@@ -2,12 +2,13 @@
 
 namespace ParamIDs
 {
-inline constexpr const char* lowCutFreq   = "LowCut Freq";
-inline constexpr const char* highCutFreq  = "HighCut Freq";
-inline constexpr const char* peakFreq     = "Peak Freq";
-inline constexpr const char* peakGain     = "Peak Gain";
-inline constexpr const char* peakQuality  = "Peak Quality";
-inline constexpr const char* lowCutSlope  = "LowCut Slope";
-inline constexpr const char* highCutSlope = "HighCut Slope";
+// JUCE doesn't support std::string_view to juce::StringRef conversion
+inline constexpr auto lowCutFreq   = "LowCut Freq";
+inline constexpr auto highCutFreq  = "HighCut Freq";
+inline constexpr auto peakFreq     = "Peak Freq";
+inline constexpr auto peakGain     = "Peak Gain";
+inline constexpr auto peakQuality  = "Peak Quality";
+inline constexpr auto lowCutSlope  = "LowCut Slope";
+inline constexpr auto highCutSlope = "HighCut Slope";
 }
 

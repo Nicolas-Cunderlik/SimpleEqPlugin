@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "ResponseCurveComponent.h"
+#include "SpectrumVisualizerComponent.h"
 #include "EQLookAndFeel.h"
 #include "EQConstants.h"
 #include "ParamIDs.h"
@@ -40,6 +41,9 @@ private:
 
     // Visual representation of the EQ state
     ResponseCurveComponent responseCurve;
+
+	// Visual representation of the audio spectrum
+	SpectrumVisualizerComponent spectrumVisualizer;
 
     // Custom GUI styling
     EQLookAndFeel eqLookAndFeel;
