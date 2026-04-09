@@ -1,4 +1,4 @@
-<img width="100%" alt="Eq GUI in DAW" src="https://github.com/user-attachments/assets/8b38347f-b88b-4a4b-a8af-f08048e21195" />
+<img width="100%" alt="Eq GUI in DAW" src="https://github.com/user-attachments/assets/f4cc86a8-c6cb-4cbf-a3ac-71022cd40749" />
 
 (Image shows .vst3 open in FL Studio)
 
