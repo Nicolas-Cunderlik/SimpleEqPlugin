@@ -55,8 +55,8 @@ private:
     juce::Slider peakGainSlider;     // Range: -36 to +36
     juce::Slider peakQualitySlider;
 
-    std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()> lowCutButtons;
-    std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()> highCutButtons;
+    std::array<juce::ToggleButton, EQConstants::numSlopes> lowCutButtons;
+    std::array<juce::ToggleButton, EQConstants::numSlopes> highCutButtons;
     juce::Label lowCutSlopeUnitLabel, highCutSlopeUnitLabel;
 
     juce::Label lowCutTitle;
@@ -77,9 +77,8 @@ private:
     void styleSlider(juce::Slider&, juce::Slider::SliderStyle);
     void createFrequencyLabels();
 
-    void createSlopeButtons(std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()>& buttons,
-                            const juce::String& paramID,
-                            int radioGroupId);
+    void createSlopeButtons(std::array<juce::ToggleButton, EQConstants::numSlopes>& buttons,
+                            const juce::String& paramID, int radioGroupId);
     void slopeButtonClicked(const juce::String& paramID, int index);
     void syncSlopeButtons();
 

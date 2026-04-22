@@ -52,51 +52,23 @@ void ResponseCurveComponent::parameterChanged(const juce::String& parameterID, f
 void ResponseCurveComponent::handleAsyncUpdate()
 {
     startTimerHz(timerSpeedHz);
-    repaint();
+    populateCoefficients();
 }
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
+	const float sampleRate = audioProcessor.getSampleRate();
+	if (sampleRate <= 0.0f)
+        return;
+
+    if (!peakCoefficients || !lowCutCoefficients.size() || !highCutCoefficients.size())
+		populateCoefficients();
+
     const auto bounds = getLocalBounds();
     const auto width = bounds.getWidth();
     const auto height = bounds.getHeight();
 
     juce::Path responseCurve;
-
-    const auto sampleRate = (float)audioProcessor.getSampleRate();
-    if (width <= 0 || sampleRate <= 0.0f)
-        return;
-
-    const auto settings = getChainSettings(audioProcessor.apvts);
-
-    const auto peakGain = juce::Decibels::decibelsToGain(settings.peakGainInDecibels);
-
-    auto peakCoefficients =
-        juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-            sampleRate,
-            settings.peakFreq,
-            settings.peakQuality,
-            peakGain);
-
-    auto lowCutBiquads =
-        IIRFilter::designButterworthCutFilter(
-            settings.lowCutFreq,
-            sampleRate,
-            EQConstants::slopeToOrder(settings.lowCutSlope),
-            IIRFilter::FilterType::Highpass);
-
-    auto lowCutCoefficients = IIRFilter::convertToCoefficients(lowCutBiquads);
-
-    auto highCutBiquads =
-        IIRFilter::designButterworthCutFilter(
-            settings.highCutFreq,
-            sampleRate,
-            EQConstants::slopeToOrder(settings.highCutSlope),
-            IIRFilter::FilterType::Lowpass);
-
-    auto highCutCoefficients = IIRFilter::convertToCoefficients(highCutBiquads);
-
-    std::vector<float> mags((size_t)width);
 
     // Grid lines
     g.setColour(juce::Colours::grey.withAlpha(0.5f));
@@ -105,59 +77,48 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     {
         const float normX =
             juce::mapFromLog10(f,
-                EQConstants::minFrequencyHz,
-                EQConstants::maxFrequencyHz);
+							   EQConstants::minFrequencyHz,
+							   EQConstants::maxFrequencyHz);
 
         const float x = bounds.getX() + normX * (float)width;
 
         g.drawLine(x,
-            (float)bounds.getY(),
-            x,
-            (float)bounds.getBottom() + 10.0f,
-            1.0f);
+                   (float)bounds.getY(),
+                   x,
+                   (float)bounds.getBottom() + 10.0f,
+                   1.0f);
     }
 
     // Magnitude calculation
+    std::vector<float> mags((size_t)width);
     for (size_t i = 0; i < mags.size(); ++i)
     {
         const float normX = (float)i / (float)width;
         const float freq =
             juce::mapToLog10(normX,
-                (float)EQConstants::minFrequencyHz,
-                (float)EQConstants::maxFrequencyHz);
-
-        float mag = 1.0f;
-
-        mag *= peakCoefficients->getMagnitudeForFrequency(freq, sampleRate);
-
-        for (auto* c : lowCutCoefficients)
-            mag *= c->getMagnitudeForFrequency(freq, sampleRate);
-
-        for (auto* c : highCutCoefficients)
-            mag *= c->getMagnitudeForFrequency(freq, sampleRate);
-
-        mags[i] = juce::Decibels::gainToDecibels(mag);
+ 							 (float)EQConstants::minFrequencyHz,
+							 (float)EQConstants::maxFrequencyHz);
+		float mag = getMagnitudeForFrequency(freq);
     }
 
     responseCurve.startNewSubPath(
         (float)bounds.getX(),
         juce::jmap(mags[0],
-            -24.0f, 24.0f,
-            (float)bounds.getBottom(),
-            (float)bounds.getY()));
+                   -24.0f, 24.0f,
+                   (float)bounds.getBottom(),
+                   (float)bounds.getY()));
 
     for (size_t i = 1; i < mags.size(); ++i)
     {
-        const float y =
-            juce::jmap(mags[i],
-                -24.0f, 24.0f,
-                (float)bounds.getBottom(),
-                (float)bounds.getY());
+        const float y = juce::jmap(mags[i],
+								   -24.0f, 24.0f,
+								   (float)bounds.getBottom(),
+								   (float)bounds.getY());
 
         responseCurve.lineTo(bounds.getX() + (float)i, y);
     }
 
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colours::cyan);
     g.strokePath(responseCurve, juce::PathStrokeType(2.0f));
 
     const float fadeHeight = height * 0.25f;
@@ -171,4 +132,49 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 
     g.setGradientFill(fade);
     g.fillRect(bounds.withTop((int)(height - fadeHeight)));
+}
+
+float ResponseCurveComponent::getMagnitudeForFrequency(float freq) const
+{
+    const float sampleRate = audioProcessor.getSampleRate();
+    if (sampleRate <= 0.0f)
+        return 1.0f;
+
+    float mag = 1.0f;
+    mag *= peakCoefficients->getMagnitudeForFrequency(freq, sampleRate);
+    for (auto* c : lowCutCoefficients)
+        mag *= c->getMagnitudeForFrequency(freq, sampleRate);
+    for (auto* c : highCutCoefficients)
+        mag *= c->getMagnitudeForFrequency(freq, sampleRate);
+    return mag;
+}
+
+// All this just to show a fucking curve because otherwise there's a data race with the audio thread
+void ResponseCurveComponent::populateCoefficients()
+{
+	const auto& settings = getChainSettings(audioProcessor.apvts);
+	const float sampleRate = audioProcessor.getSampleRate();
+	if (sampleRate <= 0.0f)
+        return;
+
+	peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        sampleRate,
+        settings.peakFreq,
+		settings.peakQuality,
+		juce::Decibels::decibelsToGain(settings.peakGainInDecibels));
+
+	SimpleEQAudioProcessor::initializeCoefficients(lowCutCoefficients);
+	SimpleEQAudioProcessor::initializeCoefficients(highCutCoefficients);
+    auto lowCutBiquads = IIRFilter::designButterworthCutFilter(
+        settings.lowCutFreq,
+		sampleRate,
+		EQConstants::slopeEnumToOrder(settings.lowCutSlope),
+		IIRFilter::FilterType::Highpass);
+    auto highCutBiquads = IIRFilter::designButterworthCutFilter(
+        settings.highCutFreq,
+		sampleRate,
+		EQConstants::slopeEnumToOrder(settings.highCutSlope),
+		IIRFilter::FilterType::Lowpass);
+	IIRFilter::populateCoefficients(lowCutBiquads, lowCutCoefficients);
+	IIRFilter::populateCoefficients(highCutBiquads, highCutCoefficients);
 }

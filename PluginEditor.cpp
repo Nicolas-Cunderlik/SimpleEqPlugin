@@ -227,9 +227,8 @@ void SimpleEQAudioProcessorEditor::createFrequencyLabels()
 // The slope buttons need manual handling since they don't use attachments like the sliders.
 // Attachments do not make sense because the buttons represent multiple discrete values for a single parameter, not a continous range.
 // Could this be done better? Probably with a custom component but I'm not doing all that shit
-void SimpleEQAudioProcessorEditor::createSlopeButtons(std::array<juce::ToggleButton, EQConstants::slopeDbPerOct.size()>& buttons,
-                                                     const juce::String& paramID,
-                                                     int radioGroupId)
+void SimpleEQAudioProcessorEditor::createSlopeButtons(std::array<juce::ToggleButton, EQConstants::numSlopes>& buttons,
+                                                     const juce::String& paramID, int radioGroupId)
 {
     for (size_t i = 0; i < buttons.size(); ++i)
     {

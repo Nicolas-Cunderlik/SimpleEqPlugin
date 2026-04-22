@@ -19,6 +19,13 @@ void SpectrumVisualizerComponent::resized()
 
 void SpectrumVisualizerComponent::timerCallback()
 {
+    if (!computeSTFT())
+        return;
+
+	auto sampleRate = audioProcessor.getSampleRate();
+	if (sampleRate <= 0.0)
+        return;
+
     repaint();
 }
 
@@ -27,17 +34,10 @@ void SpectrumVisualizerComponent::paint(juce::Graphics& g)
     const auto bounds = getLocalBounds();
     const auto width = bounds.getWidth();
 
-    const auto sampleRate = audioProcessor.getSampleRate();
-    if (width <= 0 || sampleRate <= 0.0)
-        return;
-
-    if (!computeSTFT())
-        return;
-
     juce::Path responseCurve;
 
     const auto numBins = EQConstants::STFTSize / 2;
-    const float binWidth = (float)(sampleRate) / (float)(EQConstants::STFTSize);
+    const float binWidth = audioProcessor.getSampleRate() / (float)(EQConstants::STFTSize);
 
     const float leftX = (float)bounds.getX();
     const float leftY = juce::jmap(-80.0f,
@@ -57,8 +57,8 @@ void SpectrumVisualizerComponent::paint(juce::Graphics& g)
 
         const float x = (float)(bounds.getX()) + normX * (float)(bounds.getWidth());
 
-		// Tilt 3db per octave, normalized at 1kHz, to make the spectrum more visually balanced
-		const float tilt = 3.0f * std::log2(std::max(freq, 1.0f) / 1000.0f);
+		// Tilt 3.5dB per octave, normalized at 1kHz, to make the spectrum more visually balanced
+		const float tilt = 3.5f * std::log2(std::max(freq, 1.0f) / 1000.0f);
         const float mag = STFTBuffer.getSample(0, (int)(i)) + tilt;
         const float y = juce::jmap(mag,
             -80.0f, 0.0f,
@@ -68,7 +68,7 @@ void SpectrumVisualizerComponent::paint(juce::Graphics& g)
 		responseCurve.lineTo(x, y);
     }
 
-    g.setColour(juce::Colours::cyan);
+    g.setColour(juce::Colours::white.withAlpha(0.75f));
     g.strokePath(responseCurve, juce::PathStrokeType(2.0f));
 }
 
@@ -84,10 +84,8 @@ bool SpectrumVisualizerComponent::computeSTFT() noexcept
     for (size_t i = 0; i < EQConstants::STFTSize; ++i)
     {
         float mag = STFTBuffer.getSample(0, i);
-        mag /= EQConstants::STFTSize;
-        mag = juce::Decibels::gainToDecibels(mag);
-        mag = std::max(mag, -100.0f);
-        mag = std::min(mag, 0.0f);
+        mag = juce::Decibels::gainToDecibels(mag / EQConstants::STFTSize);
+        mag = std::clamp(mag, -100.0f, 0.0f);
         STFTBuffer.setSample(0, i, mag);
     }
 
@@ -104,16 +102,13 @@ bool SpectrumVisualizerComponent::readFromFifo(juce::AudioBuffer<float>& destBuf
 
     auto readHandle = fifo.read(destBuffer.getNumSamples());
 
-    for (int i = 0; i < destBuffer.getNumSamples(); ++i)
+    for (size_t i = 0; i < destBuffer.getNumSamples(); ++i)
     {
         if (i < readHandle.blockSize1)
             destBuffer.setSample(0, i, buffer.getSample(0, readHandle.startIndex1 + i));
 
-        else if (i < readHandle.blockSize1 + readHandle.blockSize2)
+        else if (i < readHandle.blockSize1 + readHandle.blockSize2) // Yes redundant but more readable
             destBuffer.setSample(0, i, buffer.getSample(0, readHandle.startIndex2 + (i - readHandle.blockSize1)));
-        
-        else
-            destBuffer.setSample(0, i, 0.0f);
     }
 
     return true;

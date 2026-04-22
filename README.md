@@ -9,8 +9,6 @@ Instructions:
 - Then, refresh your plugin list (assuming it checks the directory) for it to appear
 - Find the plugin in your list of plugins and attach it to a mixer channel to use it
 
-- For macOS, I will try to maintain a downloadable VST3/AU file in the repo, otherwise you can build the project yourself using the source code files
-
 This project is the beginning of my DSP journey.
 I plan to use it as a stepping stone for implementing a ML algorithm for polyphonic key detection and audio-to-MIDI conversion.
 

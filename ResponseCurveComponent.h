@@ -21,11 +21,19 @@ private:
     void parameterChanged(const juce::String& parameterID, float newValue) override;
     void handleAsyncUpdate() override;
 
+	float getMagnitudeForFrequency(float freq) const;
+	void populateCoefficients();
+
     SimpleEQAudioProcessor& audioProcessor;
 
     uint32_t lastParameterChangeMs = 0;
     const uint32_t noParameterChangeThresholdMs = 1000;
     const uint8_t timerSpeedHz = 30;
+
+    // Not great to clone coefficients but it saves boilerplate or data races
+	juce::dsp::IIR::Coefficients<float>::Ptr peakCoefficients;
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> lowCutCoefficients,
+                                                                     highCutCoefficients;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ResponseCurveComponent)
 };

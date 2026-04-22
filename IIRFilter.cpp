@@ -1,20 +1,21 @@
 #include "IIRFilter.h"
 #include <cmath>
 
-std::vector<IIRFilter::Biquad> IIRFilter::designButterworthCutFilter(float cutoff, float sampleRate, int order, FilterType type)
+std::array<IIRFilter::Biquad, EQConstants::maxStages>
+IIRFilter::designButterworthCutFilter(float cutoff, float sampleRate, int order, FilterType type)
 {
-    std::vector<Biquad> filters;
+    std::array<Biquad, EQConstants::maxStages> filters{}; // No vector for the audio thread
 
+	const bool isOddOrder = (order % 2 == 1);
+    const size_t activeStages = (order + 1) / 2; // Ceiling to account for odd orders
     // Future-proofing (useless right now, slopes represent 2nd, 4th, 6th, and 8th order)
-    if (order % 2 == 1)
-        filters.push_back(makeFirstOrderBiquad(cutoff, sampleRate, type));
+    if (isOddOrder)
+        filters[0] = makeFirstOrderBiquad(cutoff, sampleRate, type);
 
-    size_t numStages = order / 2;
-
-    for (size_t i = 0; i < numStages; ++i)
+	for (size_t i = isOddOrder ? 1 : 0; i < activeStages; ++i)
     {
         float Q = 1.f / (2.f * cosf((2.f * i + 1.f) * juce::float_Pi / (2.f * order)));
-        filters.push_back(makeBiquad(cutoff, sampleRate, Q, type));
+        filters[i] = makeBiquad(cutoff, sampleRate, Q, type);
     }
 
     return filters;
@@ -76,20 +77,20 @@ IIRFilter::Biquad IIRFilter::makeBiquad(float cutoffFrequency, float sampleRate,
     return bq;
 }
 
-// Typically JUCE filters are implemented using predefined classes, this converts biquads -> JUCE IIR Biquad Coefficients
-juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>
-IIRFilter::convertToCoefficients(const std::vector<Biquad>& biquads)
+void IIRFilter::populateCoefficients(const std::array<Biquad, EQConstants::maxStages>& biquads,
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>& coeffs)
 {
-    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> coeffs;
-
-    for (const auto& bq : biquads)
+	for (size_t i = 0; i < EQConstants::maxStages; ++i)
     {
-        coeffs.add(new juce::dsp::IIR::Coefficients<float>(
-            bq.b0, bq.b1, bq.b2,
-            1.f, // JUCE expects a0 = 1
-            bq.a1,
-            bq.a2));
+        int numCoeffs = 6; // This is a JUCE constant
+        if (auto* coeff = coeffs.getObjectPointer(i))
+        {
+			*coeff = std::array<float, 6>{ biquads[i].b0,
+                                           biquads[i].b1,
+                                           biquads[i].b2,
+                                           1.f,
+                                           biquads[i].a1,
+                                           biquads[i].a2 };
+        }
     }
-
-    return coeffs;
 }

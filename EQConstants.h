@@ -11,8 +11,8 @@ enum class Slope {
     Slope_12, Slope_24, Slope_36, Slope_48
 };
 
-inline constexpr float minFrequencyHz = 20.0f;
-inline constexpr float maxFrequencyHz = 20000.0f;
+constexpr float minFrequencyHz = 20.0f;
+constexpr float maxFrequencyHz = 20000.0f;
 
 inline constexpr std::array<float, 9> frequenciesHz
 {
@@ -29,8 +29,11 @@ inline constexpr std::array<int, 4> slopeDbPerOct
     12, 24, 36, 48
 };
 
+constexpr int numSlopes = slopeDbPerOct.size();
+constexpr int maxStages = numSlopes + 1; // To account for any first-order filters (e.g. 18dB/oct)
+
 // Takes a Slope enum value and converts it to a filter order (2, 4, 6, or 8)
-constexpr int slopeToOrder(Slope slope)
+inline constexpr int slopeEnumToOrder(Slope slope)
 {
     return 2 * ((int)slope + 1);
 }
@@ -38,8 +41,8 @@ constexpr int slopeToOrder(Slope slope)
 //------------------------------------------------
 // Constants for the spectrum analyzer
 //------------------------------------------------
-inline constexpr size_t STFTOrder = 10;
-inline constexpr size_t STFTSize = 2 << STFTOrder - 1; 
+constexpr size_t STFTOrder = 10;
+constexpr size_t STFTSize = 1 << STFTOrder; 
 // This is how big the buffer and fifo are relative to host-provided buffer size
-inline constexpr size_t SpectrumAnalyzerBufferSizeMultiplier = 4;
+constexpr size_t SpectrumAnalyzerBufferSizeMultiplier = 4;
 }

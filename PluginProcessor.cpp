@@ -129,6 +129,10 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     leftChain.prepare(spec);
     rightChain.prepare(spec);
 
+    peakCoefficients = new juce::dsp::IIR::Coefficients<float>();
+    initializeCoefficients(lowCutCoefficients);
+    initializeCoefficients(highCutCoefficients);
+
     updateFilters();
     filtersNeedUpdate.store(false);
 
@@ -244,9 +248,9 @@ void SimpleEQAudioProcessor::pushFilteredMonoAudioToFifo(const juce::dsp::AudioB
         for (size_t channel = 0; channel < numChannels; ++channel)
             sample += block.getChannelPointer(channel)[i];
 
-        const int fifoIndex = (i < static_cast<size_t>(writeHandle.blockSize1))
-            ? writeHandle.startIndex1 + static_cast<int>(i)
-            : writeHandle.startIndex2 + static_cast<int>(i) - writeHandle.blockSize1;
+        const int fifoIndex = (i < (size_t)writeHandle.blockSize1)
+            ? writeHandle.startIndex1 + (int)i
+            : writeHandle.startIndex2 + (int)i - writeHandle.blockSize1;
 
         filteredMonoBuffer.setSample(0, fifoIndex, sample / numChannels);
     }
@@ -308,10 +312,12 @@ void SimpleEQAudioProcessor::parameterChanged(const juce::String& parameterID, f
 
 void SimpleEQAudioProcessor::updatePeakFilter(const ChainSettings& chainSettings)
 {
-    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(),
+    auto newCoeffs = juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter(getSampleRate(),
         chainSettings.peakFreq,
         chainSettings.peakQuality,
         juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
+
+	*peakCoefficients = newCoeffs;
 
     updateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
@@ -326,24 +332,24 @@ void SimpleEQAudioProcessor::updateLowCutFilters(const ChainSettings& chainSetti
 {
     auto biquads = IIRFilter::designButterworthCutFilter(chainSettings.lowCutFreq,
                                                        getSampleRate(),
-                                                       EQConstants::slopeToOrder(chainSettings.lowCutSlope),
+                                                       EQConstants::slopeEnumToOrder(chainSettings.lowCutSlope),
                                                        IIRFilter::FilterType::Highpass);
-    auto cutCoefficients = IIRFilter::convertToCoefficients(biquads);
+    IIRFilter::populateCoefficients(biquads, lowCutCoefficients);
 
     auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
     auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
 
-    updateCutFilter(leftLowCut, cutCoefficients, chainSettings.lowCutSlope);
-    updateCutFilter(rightLowCut, cutCoefficients, chainSettings.lowCutSlope);
+    updateCutFilter(leftLowCut, lowCutCoefficients, chainSettings.lowCutSlope);
+    updateCutFilter(rightLowCut, lowCutCoefficients, chainSettings.lowCutSlope);
 }
 
 void SimpleEQAudioProcessor::updateHighCutFilters(const ChainSettings& chainSettings)
 {
     auto biquads = IIRFilter::designButterworthCutFilter(chainSettings.highCutFreq,
                                                       getSampleRate(),
-                                                      EQConstants::slopeToOrder(chainSettings.highCutSlope),
+                                                      EQConstants::slopeEnumToOrder(chainSettings.highCutSlope),
                                                       IIRFilter::FilterType::Lowpass);
-    auto highCutCoefficients = IIRFilter::convertToCoefficients(biquads);
+    IIRFilter::populateCoefficients(biquads, highCutCoefficients);
 
     auto& leftHighCut = leftChain.get<ChainPositions::HighCut>();
     auto& rightHighCut = rightChain.get<ChainPositions::HighCut>();
@@ -448,7 +454,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
         0));
 
     return layout;
+}
 
+void SimpleEQAudioProcessor::initializeCoefficients(
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>& coefficients)
+{
+    if (coefficients.size() == EQConstants::maxStages)
+        return;
+
+    coefficients.clear();
+
+	for (size_t i = 0; i < EQConstants::maxStages; ++i)
+        coefficients.add(new juce::dsp::IIR::Coefficients<float>());
 }
 
 //==============================================================================

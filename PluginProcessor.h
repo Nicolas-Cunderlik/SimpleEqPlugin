@@ -79,11 +79,20 @@ public:
 	const juce::AudioBuffer<float>& getFilteredMonoBuffer() const noexcept;
 	void pushFilteredMonoAudioToFifo(const juce::dsp::AudioBlock<float>& block);
 
+    static void initializeCoefficients(
+        juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>& coefficients);
+
 private:
     juce::AbstractFifo filteredBufferFifo{ EQConstants::STFTSize };
     juce::AudioBuffer<float> filteredMonoBuffer { 1, EQConstants::STFTSize };
 
     using Filter = juce::dsp::IIR::Filter<float>;
+    using Coefficients = Filter::CoefficientsPtr;
+
+	juce::dsp::IIR::Coefficients<float>::Ptr peakCoefficients;
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> lowCutCoefficients,
+                                                                     highCutCoefficients;
+
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
     MonoChain leftChain, rightChain;
@@ -96,7 +105,6 @@ private:
     };
 
     void updatePeakFilter(const ChainSettings& chainSettings);
-    using Coefficients = Filter::CoefficientsPtr;
     static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
     template<int Index, typename ChainType, typename CoefficientType>

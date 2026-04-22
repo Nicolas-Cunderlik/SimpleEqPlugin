@@ -50,7 +50,11 @@ void EQLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width,
     auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(width * 0.25f, 0.0f);
     auto trackX = bounds.getCentreX() - (trackWidth * 0.5f);
     juce::Path trackPath;
-    trackPath.addRoundedRectangle(trackX, bounds.getY(), trackWidth, bounds.getHeight(), trackWidth * 0.5f);
+    trackPath.addRoundedRectangle(trackX,
+                                  bounds.getY(),
+                                  trackWidth,
+                                  bounds.getHeight(),
+                                  trackWidth * 0.5f);
     g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId));
     g.fillPath(trackPath);
 
@@ -66,8 +70,7 @@ void EQLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width,
 }
 
 void EQLookAndFeel::drawTickBox(juce::Graphics& g, juce::Component& btn,
-    float x, float y, float w, float h,
-    bool ticked, bool isEnabled,
+    float x, float y, float w, float h, bool ticked, bool isEnabled,
     bool isMouseOver, bool isButtonDown)
 {
 	juce::ignoreUnused(isEnabled, isMouseOver, isButtonDown);
